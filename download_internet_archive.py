@@ -99,8 +99,10 @@ def store_to_hdf5(data_directory, hdf5_filepath, output_size=64, verbose=True, p
 
             for output_size in output_sizes:
                 if data.shape != output_size:
-                    data = imresize(data, (output_size[0], output_size[1]))
-                getattr(hdf5_file.root, 'data_' + str(output_size[0])).append(data[np.newaxis] / 127.5 - 1)
+                    resized_data = imresize(data, (output_size[0], output_size[1]))
+                else:
+                    resized_data = data
+                getattr(hdf5_file.root, 'data_' + str(output_size[0])).append(resized_data[np.newaxis] / 127.5 - 1)
 
             hdf5_file.root.imagenames.append(np.array(os.path.basename(image))[np.newaxis][np.newaxis])
         except KeyboardInterrupt:
@@ -133,10 +135,8 @@ class PageData(object):
 
         indexes = self.indexes[(batch_num % total_batches) * batch_size: (batch_num % total_batches + 1) * batch_size]
 
-        print(self.zoom_mapping[zoom_level])
-        print(zoom_level)
-        print(self.zoom_mapping)
-        return np.array([getattr(self.hdf5.root, 'data_' + str(self.zoom_mapping[zoom_level]))[idx] for idx in indexes])
+        data = np.array([getattr(self.hdf5.root, 'data_' + str(self.zoom_mapping[zoom_level]))[idx] for idx in indexes])
+        return data
 
     def close(self):
 

@@ -4,7 +4,7 @@ import tensorflow as tf
 import numpy as np
 import math
 
-from utils import add_parameter, save_images
+from utils import add_parameter, save_images, save_image
 from ops import lrelu, conv2d, fully_connect, upscale, downscale, pixel_norm, avgpool2d, minibatch_state_concat
 
 
@@ -49,6 +49,7 @@ class PGGAN(object):
 
         # Misc Parameters
         add_parameter(self, kwargs, 'random_seed', None)
+        add_parameter(self, kwargs, 'inference_mode', False)
 
         # Allow users to specify output sizes directly, but convert to 'depth' because it's easier later.
         self.model_progressive_depth = int(math.log(self.model_output_size, 2) - 1)
@@ -58,7 +59,7 @@ class PGGAN(object):
             self.filter_num_reduction_transition_depth = int(math.log(self.filter_num_reduction_transition_size, 2) - 1)
 
         # Shrink model at larger sizes to maintain performance / memory constraints.
-        if self.batch_size_reduction_transition_depth is not None:
+        if self.batch_size_reduction_transition_depth is not None and not self.inference_mode:
             if self.model_progressive_depth >= self.batch_size_reduction_transition_depth:
                 self.batch_size = self.reduced_batch_size
 
@@ -92,8 +93,6 @@ class PGGAN(object):
                 scope.reuse_variables()
 
             convs = []
-
-            print(model_progressive_depth)
 
             convs += [tf.reshape(latent_var, [self.batch_size, 1, 1, self.latent_size])]
             convs[-1] = pixel_norm(lrelu(conv2d(convs[-1], output_dim=self.get_filter_num(1), k_h=4, k_w=4, d_w=1, d_h=1, padding='Other', name='gen_n_1_conv')))
@@ -235,27 +234,6 @@ class PGGAN(object):
 
         return
 
-        # total_para = 0
-        # for variable in self.d_vars:
-        #     shape = variable.get_shape()
-        #     print variable.name, shape
-        #     variable_para = 1
-        #     for dim in shape:
-        #         variable_para *= dim.value
-        #     total_para += variable_para
-        # print "The total para of D", total_para
-
-        # self.g_vars = [var for var in t_vars if 'gen' in var.name]
-
-        # total_para2 = 0
-        # for variable in self.g_vars:
-        #     shape = variable.get_shape()
-        #     print variable.name, shape
-        #     variable_para = 1
-        #     for dim in shape:
-        #         variable_para *= dim.value
-        #     total_para2 += variable_para
-
     def train(self, verbose=True):
 
         init = tf.global_variables_initializer()
@@ -271,9 +249,6 @@ class PGGAN(object):
             if self.random_seed is not None:
                 np.random.seed(self.random_seed)
                 tf.set_random_seed(self.random_seed)
-
-            print(self.transition)
-            print(self.model_progressive_depth)
 
             if self.model_progressive_depth != 1 and self.model_progressive_depth != 7:
 
@@ -294,9 +269,6 @@ class PGGAN(object):
 
                     real_data = self.training_data.get_next_batch(batch_num=batch_num, zoom_level=self.zoom_level, batch_size=self.batch_size)
 
-                    print(sample_latent.shape)
-                    print(real_data.shape)
-
                     # If in the 'resolution transition' stage, upsample and then downsample images.
                     if self.transition and self.model_progressive_depth != 0:
                         input_data = sess.run(self.real_images, feed_dict={self.images: real_data})
@@ -313,18 +285,18 @@ class PGGAN(object):
 
                 if self.transition and self.model_progressive_depth != 0:
                     # Change the interpolation ratio as training steps increase.
-                    sess.run(self.alpha_transition_assign, feed_dict={self.step_pl: step})
+                    sess.run(self.alpha_transition_assign, feed_dict={self.training_step: step})
 
-                # summary_str = sess.run(summary_op, feed_dict={self.images: realbatch_array, self.latent: sample_latent})
-                # summary_writer.add_summary(summary_str, step)
+                if step % self.model_loss_output_interval_steps == 0:
 
-                if True:
-                # if step % self.model_loss_output_interval_steps == 0:
-
-                    D_loss, G_loss, D_origin_loss, alpha_tra = sess.run([self.D_loss, self.G_loss, self.D_origin_loss, self.alpha_transition], feed_dict={self.images: real_data, self.latent: sample_latent})
+                    D_loss, G_loss, D_origin_loss, interpolation_percentage = sess.run([self.D_loss, self.G_loss, self.D_origin_loss, self.alpha_transition], feed_dict={self.images: real_data, self.latent: sample_latent})
 
                     if self.verbose:
-                        print("PGGAN Depth %d, Step %d: Dis_WP Loss=%.7f Gen loss=%.7f, opt_alpha_tra=%.7f" % (self.model_progressive_depth, step, D_loss, G_loss, alpha_tra))
+
+                        if self.transition:
+                            print("PGGAN Depth %d, Interpolation Stage, Step %d: Dis_WP Loss=%.7f Gen Loss=%.7f, Interpolation=%.7f" % (self.model_progressive_depth, step, D_loss, G_loss, interpolation_percentage))
+                        else:
+                            print("PGGAN Depth %d, Step %d: Dis_WP Loss=%.7f Gen Loss=%.7f" % (self.model_progressive_depth, step, D_loss, G_loss))
 
                 if step % self.model_save_interval_steps == 0:
 
@@ -346,6 +318,205 @@ class PGGAN(object):
                 print("Model saved in file: %s" % save_path)
 
         tf.reset_default_graph()
+
+    def model_inference(self, output_directory, output_num, output_format='png', input_latent=None):
+
+        init = tf.global_variables_initializer()
+        config = tf.ConfigProto()
+        config.gpu_options.allow_growth = True
+
+        with tf.Session(config=config) as sess:
+
+            sess.run(init)
+            self.saver.restore(sess, self.input_model_path)
+
+            for batch_idx in range(0, output_num, self.batch_size):
+
+                if input_latent is None:
+                    sample_latent = np.random.normal(size=[self.batch_size, self.latent_size])
+                else:
+                    sample_latent = input_latent[batch_idx:batch_idx + self.batch_size]
+
+                if sample_latent.shape[0] < self.batch_size:
+                    sample_latent = np.concatenate([sample_latent, np.zeros(self.batch_size - sample_latent.shape[0], self.latent_size)], axis=0)
+
+                inference_images = sess.run(self.fake_images, feed_dict={self.latent: sample_latent})
+                inference_images = np.clip(inference_images, -1, 1)
+
+                for channel_idx in range(self.batch_size):
+
+                    if batch_idx + channel_idx > output_num:
+                        break
+
+                    save_image(inference_images[channel_idx, ...], '{}/inference_{:05d}.{}'.format(output_directory, batch_idx + channel_idx, output_format))
+
+        tf.reset_default_graph()
+
+    def model_interpolation(self, output_directory, interpolation_frames=100, interpolation_mode='slerp', input_latent=None, input_latent_length=2, output_format='png'):
+        
+        """Summary
+        
+        Parameters
+        ----------
+        output_directory : TYPE
+            Description
+        interpolation_frames : int, optional
+            Description
+        interpolation_mode : str, optional
+            Description
+        input_latent : None, optional
+            Description
+        input_latent_length : int, optional
+            Description
+        output_format : str, optional
+            Description
+        """
+        
+        init = tf.global_variables_initializer()
+        config = tf.ConfigProto()
+        config.gpu_options.allow_growth = True
+
+        interpolation_dict = {'slerp': slerp}
+                                # 'linear': lerp,
+                                # 'zero_linear': zero}
+
+        with tf.Session(config=config) as sess:
+
+            sess.run(init)
+            self.saver.restore(sess, self.input_model_path)
+
+            if input_latent is None:
+                input_latent = [np.random.normal(size=[self.latent_size]) for x in range(input_latent_length)]
+
+            latents = []
+            for idx in range(1, len(input_latent)):
+
+                latents += interpolation_dict[interpolation_mode](input_latent[idx - 1], input_latent[idx])
+
+                pass
+
+            latents = np.array(latents)
+            output_num = latents.shape[0]
+
+            for batch_idx in range(0, output_num, self.batch_size):
+
+                sample_latent = latents[batch_idx:batch_idx + self.batch_size]
+
+                if sample_latent.shape[0] < self.batch_size:
+                    sample_latent = np.concatenate([sample_latent, np.zeros((self.batch_size - sample_latent.shape[0], self.latent_size))], axis=0)
+
+                inference_images = sess.run(self.fake_images, feed_dict={self.latent: sample_latent})
+                inference_images = np.clip(inference_images, -1, 1)
+
+                for channel_idx in range(self.batch_size):
+
+                    if batch_idx + channel_idx > output_num:
+                        break
+
+                    save_image(inference_images[channel_idx, ...], '{}/interpolation_{:05d}.{}'.format(output_directory, batch_idx + channel_idx, output_format))
+
+
+def slerp(input_latent1, input_latent2, interpolation_frames=100):
+    
+    """Spherical linear interpolation ("slerp", amazingly enough).
+    
+    Parameters
+    ----------
+    input_latent1, input_latent2 : NumPy arrays
+        Two arrays which will be interpolated between.
+    interpolation_frames : int, optional
+        Number of frame returned during interpolation.
+    
+    Returns
+    -------
+    list
+        List of vectors of size interpolation_frames
+    """
+
+    output_latents = []
+
+    for idx in range(interpolation_frames):
+    
+        val = float(idx) / interpolation_frames
+
+        if np.allclose(input_latent1, input_latent2):
+            output_latents += [input_latent2]
+            continue
+
+        omega = np.arccos(np.dot(input_latent1 / np.linalg.norm(input_latent1), input_latent2 / np.linalg.norm(input_latent2)))
+        so = np.sin(omega)
+
+        output_latents += [np.sin((1.0 - val) * omega) / so * input_latent1 + np.sin(val * omega) / so * input_latent2]
+
+    return output_latents
+
+
+def linear_interpolation(input_latent1, input_latent2, interpolation_frames=100):
+
+    """Linear interpolation
+    
+    Parameters
+    ----------
+    input_latent1, input_latent2 : NumPy arrays
+        Two arrays which will be interpolated between.
+    interpolation_frames : int, optional
+        Number of frame returned during interpolation.
+    
+    Returns
+    -------
+    list
+        List of vectors of size interpolation_frames
+    """
+
+    output_latents = []
+
+    for idx in range(interpolation_frames):
+    
+        val = float(idx) / interpolation_frames
+
+        if np.allclose(input_latent1, input_latent2):
+            output_latents += [input_latent2]
+            continue
+
+        output_latents += [input_latent1 + (input_latent2 - input_latent1) * val]
+
+    return output_latents
+
+
+def linear_to_zero_interpolation(input_latent1, input_latent2, interpolation_frames=100):
+
+    """Linear interpolation, but via the origin. Values will first interpolate
+        to the origin, and then to the destination value. Given the the center
+        of a GAN's latent space often seems to be correlated with "emptiness"
+        in my experience, this has the effect of an image disappearing and 
+        reappearing as something else.
+    
+    Parameters
+    ----------
+    input_latent1, input_latent2 : NumPy arrays
+        Two arrays which will be interpolated between.
+    interpolation_frames : int, optional
+        Number of frame returned during interpolation.
+    
+    Returns
+    -------
+    list
+        List of vectors of size interpolation_frames
+    """
+
+    output_latents = []
+
+    for idx in range(interpolation_frames):
+    
+        val = float(idx) / interpolation_frames
+
+        if np.allclose(input_latent1, input_latent2):
+            output_latents += [input_latent2]
+            continue
+
+        output_latents += [input_latent1 + (input_latent2 - input_latent1) * val]
+
+    return output_latents
 
 
 if __name__ == '__main__':

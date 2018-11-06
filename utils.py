@@ -3,6 +3,7 @@ import scipy
 
 
 def add_parameter(class_object, kwargs, parameter, default=None):
+    
     if parameter in kwargs:
         setattr(class_object, parameter, kwargs.get(parameter))
     else:
@@ -10,6 +11,7 @@ def add_parameter(class_object, kwargs, parameter, default=None):
 
 
 def merge(images, size, channels=3):
+    
     h, w = images.shape[1], images.shape[2]
     img = np.zeros((h * size[0], w * size[1], channels))
     for idx, image in enumerate(images):
@@ -21,6 +23,7 @@ def merge(images, size, channels=3):
 
 
 def save_grid_images(images, size, path):
+    
     if images.shape[-1] == 3:
         return scipy.misc.imsave(path, merge(images, size))
     elif images.shape[-1] == 1:
@@ -28,38 +31,34 @@ def save_grid_images(images, size, path):
 
 
 def inverse_transform(image):
+    
+    """ Reverse intensity normalization for image rendering purposes.
+    """
+    
     return ((image + 1.) * 127.5).astype(np.uint8)
 
 
 def save_images(images, size, image_path):
+
+    """Saves a batch of images in [batch_size, row, column, RGB] format into
+    a composite mosaic image.
+    
+    Parameters
+    ----------
+    images : array
+        [batch_size x row x column x RGB] input array
+    size : tuple
+        row x column input tuple, specifying dimensions of the mosaic
+    image_path : str
+        Output image filepath to save to.
+    """
+
     data = inverse_transform(images)
-    return save_grid_images(data, size, image_path)
+    save_grid_images(data, size, image_path)
 
 
 def save_image(data, image_path):
     return scipy.misc.imsave(image_path, data)
-
-
-def try_int(s):
-    "Convert to integer if possible."
-    try: return int(s)
-    except: return s
-
-
-def natsort_key(s):
-    "Used internally to get a tuple by which s is sorted."
-    import re
-    return map(try_int, re.findall(r'(\d+|\D+)', s))
-
-
-def natcmp(a, b):
-    "Natural string comparison, case sensitive."
-    return cmp(natsort_key(a), natsort_key(b))
-
-
-def natcasecmp(a, b):
-    "Natural string comparison, ignores case."
-    return natcmp(a.lower(), b.lower())
 
 
 if __name__ == '__main__':

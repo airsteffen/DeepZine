@@ -134,9 +134,13 @@ def pixel_norm(input, eps=1e-8):
     return input / tf.sqrt(tf.reduce_mean(input**2, axis=3, keep_dims=True) + eps)
 
 
+def adjusted_std(input, **kwargs):
+
+    return tf.sqrt(tf.reduce_mean((input - tf.reduce_mean(input, **kwargs)) ** 2, **kwargs) + 1e-8)
+
+
 def minibatch_state_concat(input, averaging='all'):
 
-    adjusted_std = lambda x, **kwargs: tf.sqrt(tf.reduce_mean((x - tf.reduce_mean(x, **kwargs)) ** 2, **kwargs) + 1e-8)
     vals = adjusted_std(input, axis=0, keep_dims=True)
 
     if averaging == 'all':

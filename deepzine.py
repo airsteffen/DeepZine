@@ -14,9 +14,10 @@ class DeepZine(object):
     def __init__(self, **kwargs):
 
         # General Parameters
-        add_parameter(self, kwargs, 'load_data', True)
-        add_parameter(self, kwargs, 'train', True)
-        add_parameter(self, kwargs, 'inference', True)
+        add_parameter(self, kwargs, 'load_data', False)
+        add_parameter(self, kwargs, 'train', False)
+        add_parameter(self, kwargs, 'inference', False)
+        add_parameter(self, kwargs, 'interpolation', False)
 
         # Model Parameters -- more important for test/reverse, maybe
         add_parameter(self, kwargs, 'progressive_depth', 4)
@@ -43,14 +44,26 @@ class DeepZine(object):
         add_parameter(self, kwargs, 'gan_output_size', 128)
 
         # Inference Parameters
-        add_parameter(self, kwargs, 'test_data_directory', None)
-        add_parameter(self, kwargs, 'test_model_path', None)
-        add_parameter(self, kwargs, 'test_model_samples', 100)
-        add_parameter(self, kwargs, 'test_input_latent', 100)
+        add_parameter(self, kwargs, 'inference_output_format', 'png')
+        add_parameter(self, kwargs, 'inference_batch_size', 16)
+        add_parameter(self, kwargs, 'inference_model_directory', None)
+        add_parameter(self, kwargs, 'inference_output_directory', None)
+        add_parameter(self, kwargs, 'inference_model_path', None)
+        add_parameter(self, kwargs, 'inference_output_num', 100)
+        add_parameter(self, kwargs, 'inference_input_latent', None)
+
+        # Latent Space Interpolation Parameters
+        add_parameter(self, kwargs, 'interpolation_mode', 'slerp')
+        add_parameter(self, kwargs, 'interpolation_latents', None)
+        add_parameter(self, kwargs, 'interpolation_frames', 100)
+        add_parameter(self, kwargs, 'interpolation_images', 10)
 
         # Derived Parameters
         if self.progressive_depth is None:
             self.progressive_depth = int(math.log(self.gan_output_size, 2) - 1)
+        if self.gan_output_size is None:
+            self.gan_output_size = 2 * 2 ** self.progressive_depth
+
         self.training_storage = None
 
         self.kwargs = kwargs
@@ -76,7 +89,11 @@ class DeepZine(object):
 
         if self.inference:
 
-            self.test_gan()
+            self.inference_gan()
+
+        if self.interpolation:
+
+            self.interpolate_gan()
 
         self.close_storage()
 
@@ -136,11 +153,9 @@ class DeepZine(object):
         # solely on the current resolution. The loop below looks odd because the lowest 
         # resolution only has one stage.
 
-        print(self.starting_depth, self.progressive_depth)
-        print((self.progressive_depth * 2) - 1)
-        print(int(np.ceil((self.starting_depth - 1) / 2)))
-        print(range(int(np.ceil((self.starting_depth - 1) / 2)), (self.progressive_depth * 2) - 1))
-        for training_stage in range(int(np.ceil((self.starting_depth - 1) / 2)), (self.progressive_depth * 2) - 1):
+        training_stages = range(int(np.ceil((self.starting_depth) / 2)), (self.progressive_depth * 2) - 1)
+
+        for training_stage in training_stages:
 
             if (training_stage % 2 == 0):
                 transition = False
@@ -152,11 +167,8 @@ class DeepZine(object):
             current_depth = np.ceil((training_stage + 1) / 2)
             previous_depth = np.ceil((training_stage) / 2)
 
-            current_size = int(2 * 2 ** current_depth)
-            previous_size = int(2 * 2 ** previous_depth)
-
-            print(current_size, previous_size)
-            print(current_depth, previous_depth)
+            current_size = int(4 * 2 ** current_depth)
+            previous_size = int(4 * 2 ** previous_depth)
 
             output_model_path = os.path.join(self.log_dir, str(current_size), 'model.ckpt')
             if not os.path.exists(os.path.dirname(output_model_path)):
@@ -182,29 +194,51 @@ class DeepZine(object):
             pggan.build_model()
             pggan.train()
 
-    def test_gan(self, input_latent=None):
+    def load_model(self):
 
-        if not os.path.exists(self.test_data_directory):
-            os.makedirs(self.test_data_directory)
+        if self.inference_model_path is None:
 
-        if self.test_input_latent is None:
-            pggan = PGGAN(input_model_path=self.test_model_path,
-                            progressive_depth=self.progressive_depth,
-                            testing=True,
-                            channel=self.channels)
+            if self.inference_model_directory is not None:
+                self.inference_model_path = os.path.join(self.inference_model_directory, str(self.gan_output_size))
+            else:
+                print('No model given for inference!')
+                raise
 
-            pggan.build_model()
-            pggan.test_model(self.test_data_directory, self.test_model_samples)      
+        self.inference_model_path = os.path.join(self.inference_model_path, 'model.ckpt')
 
-        else:
-            for i in xrange(1, 9):
-                pggan = PGGAN(input_model_path=os.path.join(self.test_model_path, str(i), 'model.ckpt'),
-                                progressive_depth=i,
-                                testing=True,
-                                channels=self.channels)
+    def inference_gan(self, input_latent=None):
 
-                pggan.build_model()
-                pggan.test_model(self.test_data_directory, self.test_model_samples, input_latent=self.test_input_latent)      
+        if not os.path.exists(self.inference_output_directory):
+            os.mkdir(self.inference_output_directory)
+
+        self.load_model()
+
+        pggan = PGGAN(input_model_path=self.inference_model_path,
+                        model_output_size=self.gan_output_size,
+                        batch_size=self.inference_batch_size,
+                        inference_mode=True,
+                        **self.kwargs)
+
+        pggan.build_model()
+
+        pggan.model_inference(self.inference_output_directory, output_num=self.inference_output_num, output_format=self.inference_output_format, input_latent=None)
+
+    def interpolate_gan(self):
+
+        if not os.path.exists(self.inference_output_directory):
+            os.mkdir(self.inference_output_directory)
+
+        self.load_model()
+
+        pggan = PGGAN(input_model_path=self.inference_model_path,
+                        model_output_size=self.gan_output_size,
+                        batch_size=self.inference_batch_size,
+                        inference_mode=True,
+                        **self.kwargs)
+
+        pggan.build_model()
+
+        pggan.model_interpolation(self.inference_output_directory, interpolation_frames=self.interpolation_frames, interpolation_mode=self.interpolation_mode, input_latent=self.interpolation_latents, input_latent_length=self.interpolation_images)
 
 
 if __name__ == '__main__':
