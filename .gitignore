@@ -7,12 +7,10 @@ log_smaller/
 Pages*/
 *samples/
 *.nii.gz
-*.png
 rop*/
 *.csv
 saved*/
 mri*/
-*/
 *.npy
 
 # Byte-compiled / optimized / DLL files
