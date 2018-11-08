@@ -1,4 +1,8 @@
-# From https://github.com/zhangqianhui/progressive_growing_of_gans_tensorflow
+""" From https://github.com/zhangqianhui/progressive_growing_of_gans_tensorflow
+
+    I also want to note that the uniquitous existence of ops.py files with
+    underdocumented Tensorflow functions in popular deep learning pacakges.
+"""
 
 import tensorflow as tf
 
@@ -16,8 +20,6 @@ def conv2d(input_, output_dim, k_h=3, k_w=3, d_h=2, d_w=2, padding='SAME', name=
         w = tf.get_variable('w', [k_h, k_w, input_.get_shape()[-1], output_dim], initializer=variance_scaling_initializer())
 
         if padding == 'Other':
-            # Not sure what's up with this r n --andrew
-            # Something about going from latent space to first conv.
             padding = 'VALID'
             input_ = tf.pad(input_, [[0, 0], [3, 3], [3, 3], [0, 0]], "CONSTANT")
 

@@ -1,3 +1,6 @@
+""" Utilities for moving from internetarchive API to hdf5 file.
+"""
+
 import glob
 import os
 import tables
@@ -11,6 +14,10 @@ from PIL import Image
 
 
 def internet_archive_download(destination_directory, collection='MBLWHOI', pdf_num=None):
+
+    """ Uses the internetarchive Python package to stream pdf pages from a given collection
+        into a provided destination_directory.
+    """
 
     for i in internetarchive.search_items('collection:' + collection):
 
@@ -32,6 +39,10 @@ def internet_archive_download(destination_directory, collection='MBLWHOI', pdf_n
 
 
 def convert_pdf_to_image(conversion_directory, output_directory, conversion_program='pdftoppm', pdftoppm_path='pdftoppm', ghostscript_path='gswin64c.exe"'):
+
+    """ Converts a directory full of pdf files into png files using either the 
+        external package pdftoppm or the external package ghostscript.
+    """
 
     documents = glob.glob(os.path.join(conversion_directory, '*/'))
 
@@ -66,6 +77,13 @@ def convert_pdf_to_image(conversion_directory, output_directory, conversion_prog
 
 def create_hdf5_file(output_filepath, num_cases, output_sizes, preloaded=False):
 
+    """ Creates a multi-tiered HDF5 file at each resolution provided in 'output_sizes'.
+        Also stores string filepaths associated with the data.
+
+        Big credit to https://github.com/ellisdg/3DUnetCNN for bringing HDF5 into
+        my life.
+    """
+
     hdf5_file = tables.open_file(output_filepath, mode='w')
     filters = tables.Filters(complevel=5, complib='blosc')
 
@@ -78,6 +96,10 @@ def create_hdf5_file(output_filepath, num_cases, output_sizes, preloaded=False):
 
 
 def store_to_hdf5(data_directory, hdf5_filepath, output_size=64, verbose=True, preloaded=True):
+
+    """ Stores a directory of images into an HDF5 file. Also resizes these images at every power
+        of two between 4 and the output_size, provided that preloaded is set to True.
+    """
 
     input_images = glob.glob(os.path.join(data_directory, '*.png'))
 
@@ -116,6 +138,12 @@ def store_to_hdf5(data_directory, hdf5_filepath, output_size=64, verbose=True, p
 
 
 class PageData(object):
+
+    """ An object for reading and writing from an HDF5 file created via the other
+        methods in this script. It iterates through all the data in the HDF5, and
+        shuffles the order once a full iteration is complete. Images at a given
+        resolution can be requested.
+    """
 
     def __init__(self, output_size=64, hdf5=None):
 

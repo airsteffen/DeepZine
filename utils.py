@@ -4,6 +4,21 @@ import scipy
 
 def add_parameter(class_object, kwargs, parameter, default=None):
     
+    """ I find the typical way of adding parameters to classes a little opaque,
+        so I added this method. 
+    
+    Parameters
+    ----------
+    class_object : Object
+        Object to assign attribute to.
+    kwargs : dict
+        Parameters passed to object.
+    parameter : str
+        Name of attribute
+    default : None, optional
+        Default value of attribute.
+    """
+
     if parameter in kwargs:
         setattr(class_object, parameter, kwargs.get(parameter))
     else:
@@ -12,6 +27,24 @@ def add_parameter(class_object, kwargs, parameter, default=None):
 
 def merge(images, size, channels=3):
     
+    """I grabbed this code from someone else, but now I don't remember where :(.
+    
+    Parameters
+    ----------
+    images : array
+        [batch_size x row x column x RGB] input array
+    size : tuple
+        row x column input tuple, specifying dimensions of the mosaic
+    channels : int, optional
+        Number of channels in image.
+    
+    Returns
+    -------
+    array
+        Description
+    
+    """
+
     h, w = images.shape[1], images.shape[2]
     img = np.zeros((h * size[0], w * size[1], channels))
     for idx, image in enumerate(images):
@@ -24,6 +57,9 @@ def merge(images, size, channels=3):
 
 def save_grid_images(images, size, path):
     
+    """ 
+    """
+
     if images.shape[-1] == 3:
         return scipy.misc.imsave(path, merge(images, size))
     elif images.shape[-1] == 1:
@@ -58,6 +94,10 @@ def save_images(images, size, image_path):
 
 
 def save_image(data, image_path):
+
+    """ Just a wrapper around scipy  ¯|_(ツ)_/¯
+    """
+    
     return scipy.misc.imsave(image_path, data)
 
 

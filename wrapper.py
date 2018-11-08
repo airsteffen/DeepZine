@@ -3,8 +3,6 @@ import numpy as np
 import argparse
 import sys
 
-from deepneuro.docker.docker_cli import nvidia_docker_wrapper
-
 
 class DeepZine_cli(object):
 
@@ -14,7 +12,9 @@ class DeepZine_cli(object):
             description='Some commands for generating synthetic book pages with a PGGAN.',
             usage='''deepzine <command> [<args>]
                     The following commands are available:
-                        pipeline               Run the entire segmentation pipeline, with options to leave certain pre-processing steps out.
+                        pipeline               Run the entire pipeline.
+                        load_data              Use the internetarchive API to download data.
+                        train_model            
                 ''')
 
         parser.add_argument('command', help='Subcommand to run')
@@ -71,12 +71,6 @@ class DeepZine_cli(object):
         from deepneuro.pipelines.Segment_GBM.predict import predict_GBM
 
         predict_GBM(args.output_folder, FLAIR=args.FLAIR, T1POST=args.T1POST, T1PRE=args.T1, ground_truth=None, input_directory=args.input_directory, bias_corrected=args.debiased, resampled=args.resampled, registered=args.registered, skullstripped=args.skullstripped, preprocessed=args.preprocessed, save_preprocess=args.save_preprocess, save_all_steps=args.save_all_steps, output_wholetumor_filename=args.wholetumor_output, output_enhancing_filename=args.enhancing_output)
-
-    def docker_pipeline(self):
-
-        args = self.parse_args()
-
-        nvidia_docker_wrapper(['segment_gbm', 'pipeline'], vars(args), ['output_folder', 'T1', 'T1POST', 'FLAIR', 'input_directory'], docker_container='qtimlab/deepneuro_segment_gbm:latest')
 
 
 # def main():

@@ -33,7 +33,7 @@ class DeepZine(object):
         add_parameter(self, kwargs, 'internetarchive_collection', 'MBLWHOI')
         add_parameter(self, kwargs, 'convert_pdf', True)
         
-        add_parameter(self, kwargs, 'pdf_num', None)  # None == whole collection.
+        add_parameter(self, kwargs, 'pdf_num', None)
         add_parameter(self, kwargs, 'data_output_size', 1024)
         add_parameter(self, kwargs, 'preload_resized_data', True)
 
@@ -100,6 +100,7 @@ class DeepZine(object):
         return
 
     def close_storage(self):
+        
         if self.training_storage is not None:
             self.training_storage.close()
             self.training_storage = None
