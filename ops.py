@@ -1,7 +1,7 @@
 """ From https://github.com/zhangqianhui/progressive_growing_of_gans_tensorflow
 
-    I also want to note that the uniquitous existence of ops.py files with
-    underdocumented Tensorflow functions in popular deep learning pacakges.
+    Underdocumented ops.py files in open source deep learning packages are a scourge
+    and yet, well, here we are.
 """
 
 import tensorflow as tf

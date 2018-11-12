@@ -103,7 +103,7 @@ class PGGAN(object):
             for i in range(model_progressive_depth - 1):
 
                 if i == model_progressive_depth - 2 and transition:
-                    #To RGB
+                    # To RGB, low resolution
                     transition_conv = conv2d(convs[-1], output_dim=self.channels, k_w=1, k_h=1, d_w=1, d_h=1, name='gen_y_rgb_conv_{}'.format(convs[-1].shape[1]))
                     transition_conv = upscale(transition_conv, 2)
 
@@ -112,7 +112,7 @@ class PGGAN(object):
 
                 convs += [pixel_norm(lrelu(conv2d(convs[-1], output_dim=self.get_filter_num(i + 1), d_w=1, d_h=1, name='gen_n_conv_2_{}'.format(convs[-1].shape[1]))))]
 
-            #To RGB
+            # To RGB, high resolution
             convs += [conv2d(convs[-1], output_dim=self.channels, k_w=1, k_h=1, d_w=1, d_h=1, name='gen_y_rgb_conv_{}'.format(convs[-1].shape[1]))]
 
             if transition:
@@ -128,12 +128,13 @@ class PGGAN(object):
                 scope.reuse_variables()
 
             if transition:
+                # from RGB, low resolution
                 transition_conv = avgpool2d(input_image)
                 transition_conv = lrelu(conv2d(transition_conv, output_dim=self.get_filter_num(model_progressive_depth - 2), k_w=1, k_h=1, d_h=1, d_w=1, name='dis_y_rgb_conv_{}'.format(transition_conv.shape[1])))
 
             convs = []
 
-            # fromRGB
+            # from RGB, high resolution
             convs += [lrelu(conv2d(input_image, output_dim=self.get_filter_num(model_progressive_depth - 1), k_w=1, k_h=1, d_w=1, d_h=1, name='dis_y_rgb_conv_{}'.format(input_image.shape[1])))]
 
             for i in range(model_progressive_depth - 1):
@@ -149,9 +150,7 @@ class PGGAN(object):
             convs += [minibatch_state_concat(convs[-1])]
             convs[-1] = lrelu(conv2d(convs[-1], output_dim=self.get_filter_num(1), k_w=3, k_h=3, d_h=1, d_w=1, name='dis_n_conv_1_{}'.format(convs[-1].shape[1])))
             
-            #for D
             output = tf.reshape(convs[-1], [self.batch_size, -1])
-
             discriminate_output = fully_connect(output, output_size=1, scope='dis_n_fully')
 
             return tf.nn.sigmoid(discriminate_output), discriminate_output
@@ -184,29 +183,33 @@ class PGGAN(object):
         # Create resolution fade-in (transition) parameters.
         self.alpha_transition_assign = self.alpha_transition.assign(self.training_step / self.iterations_per_stage)
 
-        # Hmmm.. better way to do this? Or at least move to function.
+        """ A slightly magical bit of code inherited from the previous repository. Creates
+            multiple variable loaders in Tensorflow. When going up a resolution, variables
+            from the previous resolution are preserved, while new variables are left untouched.
+            Tensorflow throws a fit if you try to load variables that aren't present in your
+            provided model file, so this system circumvents that without loading the full
+            model every run.
+        """
         t_vars = tf.trainable_variables()
         self.d_vars = [var for var in t_vars if 'dis' in var.name]
         self.g_vars = [var for var in t_vars if 'gen' in var.name]
 
-        #s ave the variables , which remain unchanged
+        # Save the variables, which remain unchanged
         self.d_vars_n = [var for var in self.d_vars if 'dis_n' in var.name]
         self.g_vars_n = [var for var in self.g_vars if 'gen_n' in var.name]
 
-        # remove the new variables for the new model
+        # Remove the new variables for the new model
         self.d_vars_n_read = [var for var in self.d_vars_n if '{}'.format(self.model_output_size) not in var.name]
         self.g_vars_n_read = [var for var in self.g_vars_n if '{}'.format(self.model_output_size) not in var.name]
 
-        # save the rgb variables, which remain unchanged
+        # Save the rgb variables, which remain unchanged
         self.d_vars_n_2 = [var for var in self.d_vars if 'dis_y_rgb_conv' in var.name]
         self.g_vars_n_2 = [var for var in self.g_vars if 'gen_y_rgb_conv' in var.name]
-
         self.d_vars_n_2_rgb = [var for var in self.d_vars_n_2 if '{}'.format(self.model_output_size) not in var.name]
         self.g_vars_n_2_rgb = [var for var in self.g_vars_n_2 if '{}'.format(self.model_output_size) not in var.name]
 
         self.saver = tf.train.Saver(self.d_vars + self.g_vars)
         self.r_saver = tf.train.Saver(self.d_vars_n_read + self.g_vars_n_read)
-
         if len(self.d_vars_n_2_rgb + self.g_vars_n_2_rgb):
             self.rgb_saver = tf.train.Saver(self.d_vars_n_2_rgb + self.g_vars_n_2_rgb)
 

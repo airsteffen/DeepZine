@@ -3,6 +3,7 @@ import os
 import tables
 import numpy as np
 import math
+import sys
 
 from download_internet_archive import internet_archive_download, convert_pdf_to_image, store_to_hdf5, PageData
 from utils import add_parameter
@@ -13,21 +14,18 @@ class DeepZine(object):
 
     def __init__(self, **kwargs):
 
-        # General Parameters
+        # Execution Parameters
         add_parameter(self, kwargs, 'load_data', False)
         add_parameter(self, kwargs, 'train', False)
         add_parameter(self, kwargs, 'inference', False)
         add_parameter(self, kwargs, 'interpolation', False)
 
-        # Model Parameters -- more important for test/reverse, maybe
-        add_parameter(self, kwargs, 'progressive_depth', 4)
-        add_parameter(self, kwargs, 'starting_depth', 0)
-
-        # Train Data Parameters
+        # Data Loading Parameters
         add_parameter(self, kwargs, 'data_hdf5', None)
         add_parameter(self, kwargs, 'pdf_directory', None)
         add_parameter(self, kwargs, 'image_directory', None)
         add_parameter(self, kwargs, 'overwrite', False)
+        add_parameter(self, kwargs, 'pdf_conversion_program', 'pdftoppm')
 
         add_parameter(self, kwargs, 'download_pdf', True)
         add_parameter(self, kwargs, 'internetarchive_collection', 'MBLWHOI')
@@ -40,7 +38,9 @@ class DeepZine(object):
         # Training GAN Parameters
         add_parameter(self, kwargs, 'samples_dir', './samples')
         add_parameter(self, kwargs, 'log_dir', './log')
+        add_parameter(self, kwargs, 'starting_depth', None)
         add_parameter(self, kwargs, 'progressive_depth', None)
+        add_parameter(self, kwargs, 'gan_starting_size', 4)
         add_parameter(self, kwargs, 'gan_output_size', 128)
 
         # Inference Parameters
@@ -53,16 +53,21 @@ class DeepZine(object):
         add_parameter(self, kwargs, 'inference_input_latent', None)
 
         # Latent Space Interpolation Parameters
-        add_parameter(self, kwargs, 'interpolation_mode', 'slerp')
+        add_parameter(self, kwargs, 'interpolation_method', 'slerp')
         add_parameter(self, kwargs, 'interpolation_latents', None)
         add_parameter(self, kwargs, 'interpolation_frames', 100)
-        add_parameter(self, kwargs, 'interpolation_images', 10)
+        add_parameter(self, kwargs, 'interpolation_vector_num', 10)
 
         # Derived Parameters
         if self.progressive_depth is None:
             self.progressive_depth = int(math.log(self.gan_output_size, 2) - 1)
+        if self.starting_depth is None:
+            self.starting_depth = int(math.log(self.gan_starting_size, 2) - 1)
+
         if self.gan_output_size is None:
             self.gan_output_size = 2 * 2 ** self.progressive_depth
+        if self.gan_starting_size is None:
+            self.gan_starting_size = 2 * 2 ** self.starting_depth
 
         self.training_storage = None
 
@@ -100,7 +105,7 @@ class DeepZine(object):
         return
 
     def close_storage(self):
-        
+
         if self.training_storage is not None:
             self.training_storage.close()
             self.training_storage = None
@@ -132,7 +137,7 @@ class DeepZine(object):
             if self.convert_pdf:
                 if not os.path.exists(self.image_directory):
                     os.mkdir(self.image_directory)
-                convert_pdf_to_image(self.pdf_directory, self.image_directory)
+                convert_pdf_to_image(self.pdf_directory, self.image_directory, conversion_program=self.pdf_conversion_program)
 
             # Preprocess images and write to HDF5.
             output_hdf5 = store_to_hdf5(self.image_directory, self.data_hdf5, self.data_output_size)
@@ -216,7 +221,6 @@ class DeepZine(object):
 
         pggan = PGGAN(input_model_path=self.inference_model_path,
                         model_output_size=self.gan_output_size,
-                        batch_size=self.inference_batch_size,
                         inference_mode=True,
                         **self.kwargs)
 
@@ -233,13 +237,12 @@ class DeepZine(object):
 
         pggan = PGGAN(input_model_path=self.inference_model_path,
                         model_output_size=self.gan_output_size,
-                        batch_size=self.inference_batch_size,
                         inference_mode=True,
                         **self.kwargs)
 
         pggan.build_model()
 
-        pggan.model_interpolation(self.inference_output_directory, interpolation_frames=self.interpolation_frames, interpolation_mode=self.interpolation_mode, input_latent=self.interpolation_latents, input_latent_length=self.interpolation_images)
+        pggan.model_interpolation(self.inference_output_directory, interpolation_frames=self.interpolation_frames, interpolation_method=self.interpolation_method, input_latent=self.interpolation_latents, input_latent_length=self.interpolation_vector_num)
 
 
 if __name__ == '__main__':
