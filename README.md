@@ -13,13 +13,13 @@ Synthetic book pages made with deep learning. The thing that made [this Youtube 
 
 ## About
 
+![Alt text](./resources/page_example.png?raw=true "Pages!!!!!!!!")
+
 This is a repository for a particular implementation of the Progressively Growing Generative Adversarial Network (PGGAN). This architecture was first developed by [Karras et al.](https://github.com/tkarras/progressive_growing_of_gans) in ["Progressive Growing of GANs for Improved Quality, Stability, and Variation"](https://arxiv.org/abs/1710.10196). The code that this repository was based on was developed by the Github user zhangqianhui's [Tensorflow implementation](https://github.com/zhangqianhui/progressive_growing_of_gans_tensorflow) of the PGGAN, although some significant changes have been made since.
 
 While the classic implementations of the PGGAN so far have been to make high-resolution, realistic [faces, objects](https://www.youtube.com/watch?v=XOxxPcy5Gr4), and [memes](https://twitter.com/goodfellow_ian/status/937406530743287808), this implementation generates syntehtic book pages! It does this by downloading a set number of print pages from the Internet Archive using their Python API, preprocessing them into images of a regular square shape, and then feeding them into the original PGGAN architecture. You can read documentation on how to do all of that below.
 
 This project was developed as a sort of toy dataset for other work on [synthesizing high-resolution medical images](https://arxiv.org/abs/1805.03144) using the PGGAN. One of the things I noticed while training medical image PGGANs was that some repetitive overlaid clinical annotations were reproduced letter-for-letter in the synthesized images. I wanted to see what the PGGAN would do on a dataset of purely text. I downloaded archived scientific reports from the [Woods Hole Oceanographic Institute](), and found the result to be fascinating. Instead of English letters, there were dreamlike pseudo-letters, arranged in fake paragraphs, in fake columns, with fake headers and fake page numbers. Cover pages, tables, and figures swirled together into abstract ink blot pages when there was no text to generate. It was mesmerizing, and I think worth sharing :).
-
-![Alt text](./resources/page_example.png?raw=true "Pages!!!!!!!!")
 
 ## Requirements
 
@@ -84,8 +84,10 @@ I find it more pleasant to read than Python's default implementation of class va
 
 I think there are a lot of other collections on the Internet Archive that one could make some great visualizations out of. Two that. Unfortunately, I don't really have the capacity to make them. But at least I have can give you the code, so that maybe you can take a stab at it. Here are two collections that I think might make good starts: [the Blue Sky Library](https://archive.org/details/aozorabunko) and [El Boletin Oficial de la Republica Argentina](https://archive.org/details/boletinoficialdelarepublicaargentina).
 
-![Alt text](./resources/goals.png?raw=true "DeepZine")
-<p align="center"><em>Other datasets I would like to create GANs for. Or maybe, one GAN to rule them all?</em></p>
+<p align="center">
+  <img width="770" height="481" alt="Other project ideas" src="./resources/goals.png"><br />
+    <em>Other datasets I would like to create GANs for. Or maybe, one GAN to rule them all?</em>
+</p>
 
 I also wanted a chance to make a well-documented repository in deep learning, with variable names that were more than one letter long. I also have not seen too many deep learning repos that include code not only for implementing a neural network, but also for gathering and preprocessing data using APIs and external packages. Hopefully, this project can serve as an example for other people's projects.
 
