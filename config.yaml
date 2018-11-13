@@ -15,7 +15,12 @@ pdf_directory: ~/pdf_directory
 image_directory: ~/image_directory
 data_hdf5: ~/data.hdf5
 
-# Internet Archive collection identifier. 
+# Internet Archive collection identifier. I don't know if there is
+# a list of identifiers out there, but you can find collection IDs
+# by following links from this Wikipedia page: 
+# https://en.wikipedia.org/wiki/Lists_of_Internet_Archive%27s_collections.
+# Select a collection, and the identifier will be found at:
+# https://archive.org/details/[COLLECTION_IDENTIFIER]
 internetarchive_collection: MBLWHOI
 
 # Number of PDFs downloaded are capped after this number.
@@ -28,7 +33,8 @@ data_output_size: 1024
 
 # -------------------------------------
 
-# Set to true if you want to train a model.
+# Set to true if you want to train a model. Model will train
+# on data loaded from "data_hdf5" set in the previous section.
 train: True
 
 # Models will be outputted into log_dir, as well as TensorBoard
@@ -44,6 +50,7 @@ samples_dir: ~/samples
 model_sample_interval_steps: 400
 
 # -------------------------------------
+# Model parameters.
 
 # All output images are square, and must be powers of 2.
 # For example "128" means train the GAN up to 128x128 images.
