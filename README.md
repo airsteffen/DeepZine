@@ -14,6 +14,7 @@ Synthetic book pages made with deep learning. The thing that made [this Youtube 
 ## About
 
 ![Alt text](./resources/page_example.png?raw=true "Synthetic Pages")
+<p align="center"><em>Synthetic pages from DeepZine.</em></p>
 
 This is a repository for a particular implementation of the Progressively Growing Generative Adversarial Network (PGGAN). This architecture was first developed by [Karras et al.](https://github.com/tkarras/progressive_growing_of_gans) in ["Progressive Growing of GANs for Improved Quality, Stability, and Variation"](https://arxiv.org/abs/1710.10196). The code that this repository was based on was developed by the Github user zhangqianhui's [Tensorflow implementation](https://github.com/zhangqianhui/progressive_growing_of_gans_tensorflow) of the PGGAN, although some significant changes have been made since.
 
@@ -53,7 +54,12 @@ To run, for example, the load_data part of the pipeline, just set the `load_data
 
 One thing to note is that when loading an old model, you need to make sure that the parameters in the "Model Parameters" section of the config file are the same as when you trained that model. Otherwise, Tensorflow will get mad :'(.
 
-Pretrained models at resolutions 4 through 1024 can be found in the pretrained_models folder. If you want to run inference on these models, you can use the config file included in this repository titled "config_pretrained.yaml". These pretrained models were trained onf 50,000+ pages from 100+ documents in the Woods Hole Oceanographic 
+Pretrained models at resolutions 4 through 1024 can be found in the pretrained_models folder. If you want to run inference on these models, you can use the config file included in this repository titled "config_pretrained.yaml". These pretrained models were trained onf 50,000+ pages from 100+ documents in the [Woods Hole Oceanographic Institute](https://archive.org/details/MBLWHOI) collection on Internet Archive. Be sure to turn the
+
+    pretrained: True
+
+flag on when using these pretrained models, as they were created earlier in
+the year with a slightly different architecture than the one provided here.
 
 If you don't want to use the config.yaml file, I have tried to document the rest of the code. Play around with it if you want, and create a Github issue if something doesn't work!
 
