@@ -42,7 +42,7 @@ class PGGAN(object):
 
         # Model Size Throttling Parameters
         add_parameter(self, kwargs, 'reduced_batch_size', 4)
-        add_parameter(self, kwargs, 'batch_size_reduction_transition_depth', None)
+        add_parameter(self, kwargs, 'batch_size_reduction_transition_depth', 20)
         add_parameter(self, kwargs, 'batch_size_reduction_transition_size', 128)
         add_parameter(self, kwargs, 'filter_num_reduction_transition_depth', None)
         add_parameter(self, kwargs, 'filter_num_reduction_transition_size', 128)
@@ -50,6 +50,7 @@ class PGGAN(object):
         # Misc Parameters
         add_parameter(self, kwargs, 'random_seed', None)
         add_parameter(self, kwargs, 'inference_mode', False)
+        add_parameter(self, kwargs, 'pretrained_model', False)
 
         # Allow users to specify output sizes directly, but convert to 'depth' because it's easier later.
         self.model_progressive_depth = int(math.log(self.model_output_size, 2) - 1)
@@ -76,14 +77,14 @@ class PGGAN(object):
 
     def get_filter_num(self, depth):
 
-        # This will need to be a bit more complicated; see PGGAN paper.
-
-        if depth == 8:
-            return 16
-        if min(self.max_filter // (2 ** (depth)), 128) <= 32:
-            return 16
+        # There's something wrong here with indexing, sorry.
+        if depth < self.filter_num_reduction_transition_depth - 1:
+            return self.max_filter
         else:
-            return min(self.max_filter // (2 ** (depth)), 128)
+            if self.pretrained_model and (2 ** (depth - self.filter_num_reduction_transition_depth + 2)) > 2:
+                return 16
+            else:
+                return self.max_filter // (2 ** (depth - self.filter_num_reduction_transition_depth + 2))
 
     def generate(self, latent_var, model_progressive_depth=1, transition=False, alpha_transition=0.0, reuse=False):
 
@@ -230,11 +231,10 @@ class PGGAN(object):
         for k, v in self.log_vars:
             tf.summary.scalar(k, v)
 
-        if self.verbose:
-            for layer in tf.trainable_variables():
-                print(layer)
-            pass
-
+        # if self.verbose:
+        #     for layer in tf.trainable_variables():
+        #         print(layer)
+        
         return
 
     def train(self, verbose=True):
@@ -246,8 +246,10 @@ class PGGAN(object):
         with tf.Session(config=config) as sess:
 
             sess.run(init)
-            summary_op = tf.summary.merge_all()
-            summary_writer = tf.summary.FileWriter(self.model_logging_dir, sess.graph)
+
+            # Some Tensorboard stuff could go here..
+            # summary_op = tf.summary.merge_all()
+            # summary_writer = tf.summary.FileWriter(self.model_logging_dir, sess.graph)
 
             if self.random_seed is not None:
                 np.random.seed(self.random_seed)
@@ -287,6 +289,7 @@ class PGGAN(object):
                     sess.run(self.opti_G, feed_dict={self.latent: sample_latent})
 
                 if self.transition and self.model_progressive_depth != 0:
+
                     # Change the interpolation ratio as training steps increase.
                     sess.run(self.alpha_transition_assign, feed_dict={self.training_step: step})
 
@@ -303,15 +306,15 @@ class PGGAN(object):
 
                 if step % self.model_save_interval_steps == 0:
 
-                    save_images(real_data[0:self.batch_size], [2, self.batch_size / 2], '{}/{:02d}_real.png'.format(self.model_sample_dir, step))
+                    save_images(real_data[0:self.batch_size], [2, self.batch_size // 2], '{}/{:02d}_real.png'.format(self.model_sample_dir, step))
 
                     if self.transition and self.model_progressive_depth != 0:
 
-                        save_images(input_data[0:self.batch_size], [2, self.batch_size / 2], '{}/{:02d}_real_interpolate.png'.format(self.model_sample_dir, step))
+                        save_images(input_data[0:self.batch_size], [2, self.batch_size // 2], '{}/{:02d}_real_interpolate.png'.format(self.model_sample_dir, step))
                    
                     fake_image = sess.run(self.fake_images, feed_dict={self.latent: sample_latent})
                     fake_image = np.clip(fake_image, -1, 1)
-                    save_images(fake_image[0:self.batch_size], [2, self.batch_size / 2], '{}/{:02d}_train.png'.format(self.model_sample_dir, step))
+                    save_images(fake_image[0:self.batch_size], [2, self.batch_size // 2], '{}/{:02d}_train.png'.format(self.model_sample_dir, step))
 
                 if step % self.model_save_interval_steps == 0:
                     self.saver.save(sess, self.output_model_path)
@@ -335,6 +338,9 @@ class PGGAN(object):
 
             for batch_idx in range(0, output_num, self.batch_size):
 
+                if self.verbose:
+                    print('Working on images', batch_idx, 'to', batch_idx + self.batch_size)
+
                 if input_latent is None:
                     sample_latent = np.random.normal(size=[self.batch_size, self.latent_size])
                 else:
@@ -355,33 +361,15 @@ class PGGAN(object):
 
         tf.reset_default_graph()
 
-    def model_interpolation(self, output_directory, interpolation_frames=100, interpolation_mode='slerp', input_latent=None, input_latent_length=2, output_format='png'):
-        
-        """Summary
-        
-        Parameters
-        ----------
-        output_directory : TYPE
-            Description
-        interpolation_frames : int, optional
-            Description
-        interpolation_mode : str, optional
-            Description
-        input_latent : None, optional
-            Description
-        input_latent_length : int, optional
-            Description
-        output_format : str, optional
-            Description
-        """
+    def model_interpolation(self, output_directory, interpolation_frames=100, interpolation_method='slerp', input_latent=None, input_latent_length=2, output_format='png'):
         
         init = tf.global_variables_initializer()
         config = tf.ConfigProto()
         config.gpu_options.allow_growth = True
 
-        interpolation_dict = {'slerp': slerp}
-                                # 'linear': lerp,
-                                # 'zero_linear': zero}
+        interpolation_dict = {'slerp': slerp,
+                                'linear': linear_interpolation,
+                                'tozero': linear_to_zero_interpolation}
 
         with tf.Session(config=config) as sess:
 
@@ -394,7 +382,7 @@ class PGGAN(object):
             latents = []
             for idx in range(1, len(input_latent)):
 
-                latents += interpolation_dict[interpolation_mode](input_latent[idx - 1], input_latent[idx])
+                latents += interpolation_dict[interpolation_method](input_latent[idx - 1], input_latent[idx])
 
                 pass
 
@@ -402,6 +390,9 @@ class PGGAN(object):
             output_num = latents.shape[0]
 
             for batch_idx in range(0, output_num, self.batch_size):
+
+                if self.verbose:
+                    print('Working on images', batch_idx, 'to', batch_idx + self.batch_size)
 
                 sample_latent = latents[batch_idx:batch_idx + self.batch_size]
 
@@ -509,15 +500,24 @@ def linear_to_zero_interpolation(input_latent1, input_latent2, interpolation_fra
 
     output_latents = []
 
-    for idx in range(interpolation_frames):
-    
-        val = float(idx) / interpolation_frames
+    # Way too over-elaborate, I know. Indexing is hard.
+    part1 = range(len(range(interpolation_frames)[0:interpolation_frames // 2]))
+    part2 = range(len(range(interpolation_frames)[interpolation_frames // 2:]))
+    origin = np.zeros_like(input_latent1)
 
-        if np.allclose(input_latent1, input_latent2):
+    for idx in part1:
+        val = float(idx) / len(part1)
+        if np.allclose(input_latent1, origin):
+            output_latents += [origin]
+            continue
+        output_latents += [input_latent1 + (origin - input_latent1) * val]
+
+    for idx in part2:
+        val = float(idx) / len(part2)
+        if np.allclose(origin, input_latent2):
             output_latents += [input_latent2]
             continue
-
-        output_latents += [input_latent1 + (input_latent2 - input_latent1) * val]
+        output_latents += [origin + (input_latent2 - origin) * val]
 
     return output_latents
 

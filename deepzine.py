@@ -3,7 +3,6 @@ import os
 import tables
 import numpy as np
 import math
-import sys
 
 from download_internet_archive import internet_archive_download, convert_pdf_to_image, store_to_hdf5, PageData
 from utils import add_parameter
@@ -159,11 +158,11 @@ class DeepZine(object):
         # solely on the current resolution. The loop below looks odd because the lowest 
         # resolution only has one stage.
 
-        training_stages = range(int(np.ceil((self.starting_depth) / 2)), (self.progressive_depth * 2) - 1)
+        training_stages = range(int(np.ceil((self.starting_depth) / 2)) - 2, (self.progressive_depth * 2) - 2)
 
         for training_stage in training_stages:
 
-            if (training_stage % 2 == 0):
+            if (training_stage % 2 == 1):
                 transition = False
                 transition_string = ''
             else:

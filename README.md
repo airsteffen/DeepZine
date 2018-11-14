@@ -13,13 +13,18 @@ Synthetic book pages made with deep learning. The thing that made [this Youtube 
 
 ## About
 
-![Alt text](./resources/page_example.png?raw=true "Pages!!!!!!!!")
+![Alt text](./resources/page_example.png?raw=true "Synthetic Pages")
 
 This is a repository for a particular implementation of the Progressively Growing Generative Adversarial Network (PGGAN). This architecture was first developed by [Karras et al.](https://github.com/tkarras/progressive_growing_of_gans) in ["Progressive Growing of GANs for Improved Quality, Stability, and Variation"](https://arxiv.org/abs/1710.10196). The code that this repository was based on was developed by the Github user zhangqianhui's [Tensorflow implementation](https://github.com/zhangqianhui/progressive_growing_of_gans_tensorflow) of the PGGAN, although some significant changes have been made since.
 
 While the classic implementations of the PGGAN so far have been to make high-resolution, realistic [faces, objects](https://www.youtube.com/watch?v=XOxxPcy5Gr4), and [memes](https://twitter.com/goodfellow_ian/status/937406530743287808), this implementation generates syntehtic book pages! It does this by downloading a set number of print pages from the Internet Archive using their Python API, preprocessing them into images of a regular square shape, and then feeding them into the original PGGAN architecture. You can read documentation on how to do all of that below.
 
-This project was developed as a sort of toy dataset for other work on [synthesizing high-resolution medical images](https://arxiv.org/abs/1805.03144) using the PGGAN. One of the things I noticed while training medical image PGGANs was that some repetitive overlaid clinical annotations were reproduced letter-for-letter in the synthesized images. I wanted to see what the PGGAN would do on a dataset of purely text. I downloaded archived scientific reports from the [Woods Hole Oceanographic Institute](), and found the result to be fascinating. Instead of English letters, there were dreamlike pseudo-letters, arranged in fake paragraphs, in fake columns, with fake headers and fake page numbers. Cover pages, tables, and figures swirled together into abstract ink blot pages when there was no text to generate. It was mesmerizing, and I think worth sharing :).
+<p align="center">
+  <img width="1129" height="868" alt="Real pages" src="./resources/example_real_page.PNG"><br />
+    <em>Real pages from the <a href="https://archive.org/details/MBLWHOI">MBL-WHOI Collection.</a></em>
+</p>
+
+This project was developed as a sort of toy dataset for other work on [synthesizing high-resolution medical images](https://arxiv.org/abs/1805.03144) using the PGGAN. One of the things I noticed while training medical image PGGANs was that some repetitive overlaid clinical annotations were reproduced letter-for-letter in the synthesized images. I wanted to see what the PGGAN would do on a dataset of purely text. I downloaded archived scientific reports from the [Woods Hole Oceanographic Institute](https://archive.org/details/MBLWHOI), and found the result to be fascinating. Instead of English letters, there were dreamlike pseudo-letters, arranged in fake paragraphs, in fake columns, with fake headers and fake page numbers. Cover pages, tables, and figures swirled together into abstract ink blot pages when there was no text to generate. It was mesmerizing, and I think worth sharing :).
 
 ## Requirements
 
@@ -48,15 +53,11 @@ To run, for example, the load_data part of the pipeline, just set the `load_data
 
 One thing to note is that when loading an old model, you need to make sure that the parameters in the "Model Parameters" section of the config file are the same as when you trained that model. Otherwise, Tensorflow will get mad :'(.
 
+Pretrained models at resolutions 4 through 1024 can be found in the pretrained_models folder. If you want to run inference on these models, you can use the config file included in this repository titled "config_pretrained.yaml". These pretrained models were trained onf 50,000+ pages from 100+ documents in the Woods Hole Oceanographic 
+
 If you don't want to use the config.yaml file, I have tried to document the rest of the code. Play around with it if you want, and create a Github issue if something doesn't work!
 
 ## PAQ (Probably Asked Questions)
-
-### Do you have saved models or datasets?
-
-Yeah! First off, I suggest that unless you have ambitious plans for creating synthesized documents from other Internet Archive collections, you download my ready-made HDF5 dataset of the Woods Hole Oceanographic Institutions' library here: [link](). It has XX,XXX pages loaded on to it already, and should be good for training another page-GAN. There's no need to drain the Internet Archive's resources :) if all you want to do is replicate the original experiment :).
-
-As for the saved models, you can download them here: .
 
 ### Why not use Tero Karras' own Tensorflow implementation?
 

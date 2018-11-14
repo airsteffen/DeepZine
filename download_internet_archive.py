@@ -19,6 +19,8 @@ def internet_archive_download(destination_directory, collection='MBLWHOI', pdf_n
         into a provided destination_directory.
     """
 
+    print('Beginning internet archive download...')
+
     for i in internetarchive.search_items('collection:' + collection):
 
         if pdf_num is not None:
@@ -28,11 +30,12 @@ def internet_archive_download(destination_directory, collection='MBLWHOI', pdf_n
         archive_id = i['identifier']
         try:
             if not os.path.exists(os.path.join(destination_directory, archive_id)):
-                internetarchive.download(archive_id, verbose=True, glob_pattern='*.pdf', destdir=destination_directory)
+                x = internetarchive.download(archive_id, verbose=True, glob_pattern='*.pdf', destdir=destination_directory)
             elif os.listdir(os.path.join(destination_directory, archive_id)) == []:
-                internetarchive.download(archive_id, verbose=True, glob_pattern='*.pdf', destdir=destination_directory)
+                x = internetarchive.download(archive_id, verbose=True, glob_pattern='*.pdf', destdir=destination_directory)
         except KeyboardInterrupt:
-            raise
+            print('Cancelling download.')
+            break
         except:
             print('ERROR downloading', archive_id)
     return
@@ -44,33 +47,42 @@ def convert_pdf_to_image(conversion_directory, output_directory, conversion_prog
         external package pdftoppm or the external package ghostscript.
     """
 
+    print('Beginning pdf image conversion.')
+
     documents = glob.glob(os.path.join(conversion_directory, '*/'))
 
     for document in documents:
-        pdfs = glob.glob(os.path.join(document, '*.pdf'))
-        document_basename = os.path.join(output_directory, os.path.basename(os.path.dirname(document)))
+        
+        try:
 
-        first_page = glob.glob(document_basename + '*1.png')
-        if first_page != []:
-            print('Skipping', document_basename)
-            continue
+            pdfs = glob.glob(os.path.join(document, '*.pdf'))
+            document_basename = os.path.join(output_directory, os.path.basename(os.path.dirname(document)))
 
-        for pdf in pdfs:
-
-            print(pdf)
-
-            if pdf.endswith('_bw.pdf'):
+            first_page = glob.glob(document_basename + '*1.png')
+            if first_page != []:
+                print('Skipping', document_basename)
                 continue
 
-            if conversion_program == 'pdftoppm':
-                command = pdftoppm_path + " " + pdf + " " + document_basename + " -png"
-            elif conversion_program == 'ghostscript':
-                command = ghostscript_path + " -dBATCH -dNOPAUSE -sDEVICE=png16m -r144 -sOutputFile=" + document_basename + "-%d.png" + ' ' + pdf
-            else:
-                print('Conversion program', conversion_program, 'not recognized, exiting.')
-                raise NotImplementedError
+            for pdf in pdfs:
 
-            call(command, shell=True)
+                print(pdf)
+
+                if pdf.endswith('_bw.pdf'):
+                    continue
+
+                if conversion_program == 'pdftoppm':
+                    command = pdftoppm_path + " " + pdf + " " + document_basename + " -png"
+                elif conversion_program == 'ghostscript':
+                    command = ghostscript_path + " -dBATCH -dNOPAUSE -sDEVICE=png16m -r144 -sOutputFile=" + document_basename + "-%d.png" + ' ' + pdf
+                else:
+                    print('Conversion program', conversion_program, 'not recognized, exiting.')
+                    raise NotImplementedError
+
+                call(command, shell=True)
+
+        except KeyboardInterrupt:
+            print('Cancelling pdf to image conversion.')
+            break
 
     return
 
@@ -100,6 +112,8 @@ def store_to_hdf5(data_directory, hdf5_filepath, output_size=64, verbose=True, p
     """ Stores a directory of images into an HDF5 file. Also resizes these images at every power
         of two between 4 and the output_size, provided that preloaded is set to True.
     """
+
+    print('Beginning compression to HDF5')
 
     input_images = glob.glob(os.path.join(data_directory, '*.png'))
 

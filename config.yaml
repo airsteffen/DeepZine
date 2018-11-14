@@ -5,8 +5,10 @@ gpu_num: None
 # -------------------------------------
 
 # Set to true if you want to load and preprocess page
-# data from the Internet Archive.
+# data from the Internet Archive. Overwrite if you want
+# to write over previous data loads.
 load_data: True
+overwrite: True
 
 # Data output filepaths. First, PDF files are saved to pdf_directory.
 # Then, they are convereted to images in image_directory. Then, they
@@ -37,9 +39,9 @@ data_output_size: 1024
 # on data loaded from "data_hdf5" set in the previous section.
 train: True
 
-# Models will be outputted into log_dir, as well as TensorBoard
-# files. One model will be output for each resolution, labeled by
-# output size, and each stage of training (interpolation / stable).
+# Models will be outputted into log_dir, One model will be output
+# for each resolution, labeled by output size, and each stage of 
+# training (interpolation / stable).
 log_dir: ~/models
 model_save_interval_steps: 1000
 
@@ -99,6 +101,13 @@ generator_updates: 1
 # parameters above as when originally trained, including batch size.
 # (Hopefully this will be fixed soon!)
 inference_model_directory: ~/models
+
+# The pretrained models provided in ./pretrained_models have a slightly
+# different number of filters than is standard in this codebase. I don't 
+# have the processing power to retrain with my updated code, so if you want
+# to use the pretrained_models, set this value to True to load the legacy
+# architecture.
+pretrained_model: False
 
 # Output directory for inference and interpolation runs.
 inference_output_directory: ~/inference_images

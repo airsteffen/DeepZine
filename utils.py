@@ -95,7 +95,7 @@ def save_images(images, size, image_path):
 
 def save_image(data, image_path):
 
-    """ Just a wrapper around scipy  ¯|_(ツ)_/¯
+    """ Just a wrapper around scipy /shrug
     """
     
     return scipy.misc.imsave(image_path, data)
