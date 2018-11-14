@@ -73,9 +73,16 @@ There's no question that Karras' implementation of the PGGAN is the best one out
 
 ### What sort of GPU hardware do you need to run to get this running?
 
-It depends on how you parameterize the PGGAN. If you lower the max_filter parameter in model.py, run the model with a reduced batch size, or adjust the "Model Size Throttling Parameters", you can run a lightweight version of the PGGAN. You might not get as good results. Somewhat disconcertingly, [Google just showed](https://arxiv.org/pdf/1809.11096.pdf) that in the state of the art, the key to getting super-realistic GANs is by and large to, well, increase the batch size and the number of parameters in your model..
+It depends on how you parameterize the PGGAN. If you lower the max_filter parameter in model.py, run the model with a reduced batch size, or adjust the "Model Size Throttling Parameters", you can run a lightweight version of the PGGAN. You might not get as good results. Somewhat disconcertingly, [Google just showed](https://arxiv.org/pdf/1809.11096.pdf) that in the state of the art, the key to getting super-realistic GANs is to, well, increase the batch size and the number of parameters in your model..
 
 This being said, I originally trained this model on a [P100](https://www.nvidia.com/en-us/data-center/tesla-p100/), which may be out of the price range for most casual users (and for myself, for that matter, given how precious GPU time is these days). I would be interested to see how big we can get the PGGAN, or really _any_ GAN, to go on lower-level GPU hardware, but that's an experiment for another day.
+
+### Help, my GAN training collapsed!
+
+¯\\_(ツ)_/¯
+
+It happens. GANs have notably had a problem with training collapse. This means
+that loss functions go out of control, and your images start looking awful. While there may be solutions out there in the literature, I haven't implemented any here. You'll have to simply retrain your network, most likely :(. Drop me a note if you've found a way around this, or have found a bug in my code that causes it to happen.
 
 ### What's up with the different methods of interpolation?
 
