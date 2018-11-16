@@ -71,11 +71,11 @@ Much of this code was first written back in January/February of 2018. Back then,
 
 There's no question that Karras' implementation of the PGGAN is the best one out there, and will let you download all sorts of datasets and run all sorts of baselines. You should treat their code as a gold standard if you're looking to do any further experiments with the PGGAN.
 
-### What sort of GPU hardware do you need to run to get this running?
+### What sort of GPU hardware do you need to run to get this running (and for how long)?
 
 It depends on how you parameterize the PGGAN. If you lower the max_filter parameter in model.py, run the model with a reduced batch size, or adjust the "Model Size Throttling Parameters", you can run a lightweight version of the PGGAN. You might not get as good results. Somewhat disconcertingly, [Google just showed](https://arxiv.org/pdf/1809.11096.pdf) that in the state of the art, the key to getting super-realistic GANs is to, well, increase the batch size and the number of parameters in your model..
 
-This being said, I originally trained this model on a [P100](https://www.nvidia.com/en-us/data-center/tesla-p100/), which may be out of the price range for most casual users (and for myself, for that matter, given how precious GPU time is these days). I would be interested to see how big we can get the PGGAN, or really _any_ GAN, to go on lower-level GPU hardware, but that's an experiment for another day.
+This being said, I originally trained this model on a [P100](https://www.nvidia.com/en-us/data-center/tesla-p100/), which may be out of the price range for most casual users (and for myself, for that matter, given how precious GPU time is these days). It took about two days to train this model to completion. My final 1024x1024 layers only had 16 filters per convolution at a batch size of 4, so likely not too much is going on in those layers. I would be interested to see how big we can get the PGGAN, or really _any_ GAN, to go on lower-level GPU hardware, but that's an experiment for another day.
 
 ### Help, my GAN training collapsed!
 
