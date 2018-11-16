@@ -96,7 +96,7 @@ I find it more pleasant to read than Python's default implementation of class va
 
 ### Why make this repository?
 
-I think there are a lot of other collections on the Internet Archive that one could make some great visualizations out of. Two that. Unfortunately, I don't really have the capacity to make them. But at least I have can give you the code, so that maybe you can take a stab at it. Here are two collections that I think might make good starts: [the Blue Sky Library](https://archive.org/details/aozorabunko) and [El Boletin Oficial de la Republica Argentina](https://archive.org/details/boletinoficialdelarepublicaargentina).
+I think there are a lot of other collections on the Internet Archive that one could make some great visualizations out of. Two that. Unfortunately, I don't really have the capacity to make them. But at least I can give you the code, so that maybe you can take a stab at it. Here are two collections that I think might make good starts: [the Blue Sky Library](https://archive.org/details/aozorabunko) and [El Boletin Oficial de la Republica Argentina](https://archive.org/details/boletinoficialdelarepublicaargentina).
 
 <p align="center">
   <img width="770" height="481" alt="Other project ideas" src="./resources/goals.png"><br />
