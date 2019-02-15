@@ -1,6 +1,6 @@
 # If you have multiple GPUs, you can choose which one here.
 # None means use all available GPUs.
-gpu_num: 1
+gpu_num: None
 
 # -------------------------------------
 
